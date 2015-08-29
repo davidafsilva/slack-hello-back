@@ -29,12 +29,12 @@ package pt.davidafsilva.shb;
 import com.eclipsesource.json.JsonObject;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
-import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.net.JksOptions;
@@ -66,7 +66,9 @@ public class HelloVerticle extends AbstractVerticle {
     // default handler
     router.route().handler(BodyHandler.create());
     // POST /hello
-    router.post("/hello").handler(this::helloRequest);
+    router.post("/hello")
+        .produces("application/json")
+        .handler(this::helloRequest);
 
     // validate the configuration
     if (!validateOptions(startFuture, "keystore_file", "keystore_pass")) {
@@ -126,19 +128,22 @@ public class HelloVerticle extends AbstractVerticle {
    */
   private void helloRequest(final RoutingContext context) {
     LOGGER.info("handling request..");
-    context.request().bodyHandler(buffer -> {
-      // create the request data from the JSON/buffer
-      final SlackRequest slackRequest = Json.decodeValue(buffer.toString(), SlackRequest.class);
-      LOGGER.debug("request data: " + slackRequest);
+    // create the request data from the POST request
+    final Optional<SlackRequest> slackRequest = SlackRequest.parse(context);
+    LOGGER.info("request data: " + slackRequest);
 
-      // create the hello response
+    // validate the request
+    if (!slackRequest.isPresent()) {
+      context.response().setStatusCode(400).end();
+    } else {
+      final SlackRequest request = slackRequest.get();
       final JsonObject response = new JsonObject()
           .add("text", String.format(HELLO_RESPONSE_FORMAT,
-              slackRequest.getUserId(), slackRequest.getUserName()));
+              request.getUserId(), request.getUserName()));
 
       // send the response back to the channel
       context.response().setStatusCode(200)
           .end(response.toString());
-    });
+    }
   }
 }

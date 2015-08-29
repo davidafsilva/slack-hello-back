@@ -26,18 +26,30 @@ package pt.davidafsilva.shb;
  * #L%
  */
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.time.Instant;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import io.vertx.core.json.Json;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.RoutingContext;
 
 /**
  * The slack request data
  *
  * @author David Silva
  */
-public final class SlackRequest {
+final class SlackRequest {
+
+  // the logger
+  private static final Logger LOGGER = LoggerFactory.getLogger(SlackRequest.class);
+
+  // the supplier for the exception thrown when a POST request field is missing
+  private static final Function<String, Supplier<RuntimeException>> NO_VALUE_EXCEPTION = field ->
+      () -> new NoSuchElementException("required request field is missing: " + field);
 
   // JSON properties
   // ---------------
@@ -48,27 +60,69 @@ public final class SlackRequest {
   private Instant timestamp;
 
   // team data
-  @JsonProperty("team_id")
   private String teamIdentifier;
-  @JsonProperty("team_domain")
   private String teamDomain;
 
   // channel data
-  @JsonProperty("channel_id")
   private String channelId;
-  @JsonProperty("channel_name")
   private String channelName;
 
   // user data
-  @JsonProperty("user_id")
   private String userId;
-  @JsonProperty("user_name")
   private String userName;
 
   // actual request data
-  @JsonProperty("trigger_word")
   private String trigger;
   private String text;
+
+  // private constructor
+  private SlackRequest() {}
+
+
+  /**
+   * Creates a slack request from the given POST request context.
+   * If any error occurs, i.e. there is a missing field from the request, an {@link
+   * Optional#empty()} is returned.
+   *
+   * @param context the routing context
+   * @return the optional with the slack request, if successfully parsed
+   */
+  static Optional<SlackRequest> parse(final RoutingContext context) {
+    Optional<SlackRequest> optionalRequest;
+    try {
+      final SlackRequest request = new SlackRequest();
+      request.token = getPostValue(context, "token");
+      request.timestamp = Instant.parse(getPostValue(context, "timestamp"));
+      request.teamIdentifier = getPostValue(context, "team_id");
+      request.teamDomain = getPostValue(context, "team_domain");
+      request.channelId = getPostValue(context, "channel_id");
+      request.channelName = getPostValue(context, "channel_name");
+      request.userId = getPostValue(context, "user_id");
+      request.userName = getPostValue(context, "user_name");
+      request.trigger = getPostValue(context, "trigger_word");
+      request.text = getPostValue(context, "text");
+      optionalRequest = Optional.of(request);
+    } catch (final Exception e) {
+      LOGGER.error("unable to parse request", e);
+      optionalRequest = Optional.empty();
+    }
+
+    return optionalRequest;
+  }
+
+  /**
+   * Returns the POST property value if it's available, otherwise an {@link NoSuchElementException}
+   * is thrown.
+   *
+   * @param context  the routing context with the request data
+   * @param property the desired POST property
+   * @param <T>      the expected type of the property value
+   * @return the property value
+   */
+  private static <T> T getPostValue(final RoutingContext context, final String property) {
+    return Optional.<T>ofNullable(context.get(property))
+        .orElseThrow(NO_VALUE_EXCEPTION.apply(property));
+  }
 
   /**
    * Returns the API token
