@@ -27,6 +27,8 @@ package pt.davidafsilva.shb;
  */
 
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
@@ -36,6 +38,9 @@ import io.vertx.core.json.Json;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
+
+import static java.time.temporal.ChronoField.INSTANT_SECONDS;
+import static java.time.temporal.ChronoField.NANO_OF_SECOND;
 
 /**
  * The slack request data
@@ -50,6 +55,12 @@ final class SlackRequest {
   // the supplier for the exception thrown when a POST request field is missing
   private static final Function<String, Supplier<RuntimeException>> NO_VALUE_EXCEPTION = field ->
       () -> new NoSuchElementException("required request field is missing: " + field);
+
+  public static final DateTimeFormatter TIMESTAMP_FORMATTER = new DateTimeFormatterBuilder()
+      .appendValue(INSTANT_SECONDS, 10)
+      .appendLiteral('.')
+      .appendFraction(NANO_OF_SECOND, 0, 9, false)
+      .toFormatter();
 
   // JSON properties
   // ---------------
@@ -92,7 +103,8 @@ final class SlackRequest {
     try {
       final SlackRequest request = new SlackRequest();
       request.token = getPostValue(context, "token");
-      request.timestamp = Instant.parse(getPostValue(context, "timestamp"));
+      request.timestamp = Instant.from(
+          TIMESTAMP_FORMATTER.parse(getPostValue(context, "timestamp")));
       request.teamIdentifier = getPostValue(context, "team_id");
       request.teamDomain = getPostValue(context, "team_domain");
       request.channelId = getPostValue(context, "channel_id");
@@ -116,11 +128,10 @@ final class SlackRequest {
    *
    * @param context  the routing context with the request data
    * @param property the desired POST property
-   * @param <T>      the expected type of the property value
    * @return the property value
    */
-  private static <T> T getPostValue(final RoutingContext context, final String property) {
-    return Optional.<T>ofNullable(context.get(property))
+  private static String getPostValue(final RoutingContext context, final String property) {
+    return Optional.ofNullable(context.request().formAttributes().get(property))
         .orElseThrow(NO_VALUE_EXCEPTION.apply(property));
   }
 
