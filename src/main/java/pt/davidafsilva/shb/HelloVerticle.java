@@ -2,7 +2,7 @@ package pt.davidafsilva.shb;
 
 /*
  * #%L
- * slack-hello-word
+ * slack-hello-back
  * %%
  * Copyright (C) 2015 David Silva
  * %%
