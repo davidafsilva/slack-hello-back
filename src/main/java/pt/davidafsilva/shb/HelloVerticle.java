@@ -75,24 +75,26 @@ public class HelloVerticle extends AbstractVerticle {
         .produces("application/json")
         .handler(this::helloRequest);
 
-    // validate the configuration
-    if (!validateOptions(startFuture, "keystore_file", "keystore_pass")) {
-      return;
-    }
-
     // the http server options
-    final JksOptions jksOptions = new JksOptions()
-        .setPassword(config().getString("keystore_pass"));
-    if (config().containsKey("keystore_contents")) {
-      jksOptions.setValue(Buffer.buffer(Base64.getDecoder().decode(
-          config().getString("keystore_contents"))));
-    } else {
-      jksOptions.setPath(config().getString("keystore_file"));
-    }
     final HttpServerOptions options = new HttpServerOptions()
         .setPort(config().getInteger("http_port", 8443))
-        .setSsl(true)
-        .setKeyStoreOptions(jksOptions);
+        .setSsl(config().getBoolean("use_https", true));
+    if (options.isSsl()) {
+      // validate the configuration
+      if (!validateOptions(startFuture, "keystore_file", "keystore_pass")) {
+        return;
+      }
+
+      final JksOptions jksOptions = new JksOptions()
+          .setPassword(config().getString("keystore_pass"));
+      if (config().containsKey("keystore_contents")) {
+        jksOptions.setValue(Buffer.buffer(Base64.getDecoder().decode(
+            config().getString("keystore_contents"))));
+      } else {
+        jksOptions.setPath(config().getString("keystore_file"));
+      }
+      options.setKeyStoreOptions(jksOptions);
+    }
 
     // create the actual http server
     server = vertx.createHttpServer(options)
@@ -121,6 +123,8 @@ public class HelloVerticle extends AbstractVerticle {
         .ifPresent(p -> config().put("http_port", Integer.valueOf(p)));
     Optional.ofNullable(System.getenv("PORT"))
         .ifPresent(p -> config().put("http_port", Integer.valueOf(p)));
+    Optional.ofNullable(System.getenv("SHB_USE_SSL"))
+        .ifPresent(p -> config().put("use_https", Boolean.valueOf(p)));
   }
 
   @Override
