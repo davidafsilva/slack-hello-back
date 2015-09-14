@@ -29,10 +29,12 @@ package pt.davidafsilva.shb;
 import com.eclipsesource.json.JsonObject;
 
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Optional;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.logging.Logger;
@@ -79,12 +81,18 @@ public class HelloVerticle extends AbstractVerticle {
     }
 
     // the http server options
+    final JksOptions jksOptions = new JksOptions()
+        .setPassword(config().getString("keystore_pass"));
+    if (config().containsKey("keystore_contents")) {
+      jksOptions.setValue(Buffer.buffer(Base64.getDecoder().decode(
+          config().getString("keystore_contents"))));
+    } else {
+      jksOptions.setPath(config().getString("keystore_file"));
+    }
     final HttpServerOptions options = new HttpServerOptions()
         .setPort(config().getInteger("http_port", 8443))
         .setSsl(true)
-        .setKeyStoreOptions(new JksOptions()
-            .setPath(config().getString("keystore_file"))
-            .setPassword(config().getString("keystore_pass")));
+        .setKeyStoreOptions(jksOptions);
 
     // create the actual http server
     server = vertx.createHttpServer(options)
@@ -105,6 +113,8 @@ public class HelloVerticle extends AbstractVerticle {
   private void overrideConfigurationWithEnv() {
     Optional.ofNullable(System.getenv("SHB_KEYSTORE_FILE"))
         .ifPresent(p -> config().put("keystore_file", p));
+    Optional.ofNullable(System.getenv("SHB_KEYSTORE_CONTENTS"))
+        .ifPresent(p -> config().put("keystore_contents", p));
     Optional.ofNullable(System.getenv("SHB_KEYSTORE_PASS"))
         .ifPresent(p -> config().put("keystore_pass", p));
     Optional.ofNullable(System.getenv("SHB_HTTP_PORT"))
