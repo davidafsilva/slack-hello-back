@@ -60,6 +60,9 @@ public class HelloVerticle extends AbstractVerticle {
 
   @Override
   public void start(final Future<Void> startFuture) throws Exception {
+    // override the configuration with ENV variables, if available
+    overrideConfigurationWithEnv();
+
     // create the routing configuration
     final Router router = Router.router(vertx);
 
@@ -94,6 +97,18 @@ public class HelloVerticle extends AbstractVerticle {
             throw new IllegalStateException("unable to start http server", deployedHandler.cause());
           }
         });
+  }
+
+  /**
+   * Override the {@link #config()} definition with the available SHB environment variables.
+   */
+  private void overrideConfigurationWithEnv() {
+    Optional.ofNullable(System.getenv("SHB_KEYSTORE_FILE"))
+        .ifPresent(p -> config().put("keystore_file", p));
+    Optional.ofNullable(System.getenv("SHB_KEYSTORE_PASS"))
+        .ifPresent(p -> config().put("keystore_pass", p));
+    Optional.ofNullable(System.getenv("SHB_HTTP_PORT"))
+        .ifPresent(p -> config().put("http_port", Integer.valueOf(p)));
   }
 
   @Override
