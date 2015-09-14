@@ -55,7 +55,7 @@ public class HelloVerticle extends AbstractVerticle {
   private static final Logger LOGGER = LoggerFactory.getLogger(HelloVerticle.class);
 
   // the hello text response format
-  private static final String HELLO_RESPONSE_FORMAT = "Hello, <@%s|%s> :sunglasses:";
+  private static final String HELLO_RESPONSE_FORMAT = "Hey, <@%s|%s> :sunglasses:";
 
   // the http server
   private HttpServer server;
