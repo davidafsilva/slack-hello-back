@@ -119,6 +119,8 @@ public class HelloVerticle extends AbstractVerticle {
         .ifPresent(p -> config().put("keystore_pass", p));
     Optional.ofNullable(System.getenv("SHB_HTTP_PORT"))
         .ifPresent(p -> config().put("http_port", Integer.valueOf(p)));
+    Optional.ofNullable(System.getenv("PORT"))
+        .ifPresent(p -> config().put("http_port", Integer.valueOf(p)));
   }
 
   @Override
