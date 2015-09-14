@@ -37,7 +37,6 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.net.JksOptions;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -81,10 +80,10 @@ public class HelloVerticle extends AbstractVerticle {
     // the http server options
     final HttpServerOptions options = new HttpServerOptions()
         .setPort(config().getInteger("http_port", 8443))
-        .setSsl(true)
-        .setKeyStoreOptions(new JksOptions()
-            .setPath(config().getString("keystore_file"))
-            .setPassword(config().getString("keystore_pass")));
+        .setSsl(true);
+//        .setKeyStoreOptions(new JksOptions()
+//            .setPath(config().getString("keystore_file"))
+//            .setPassword(config().getString("keystore_pass")));
 
     // create the actual http server
     server = vertx.createHttpServer(options)
